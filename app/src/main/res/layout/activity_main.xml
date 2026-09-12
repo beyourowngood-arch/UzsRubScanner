@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fillViewport="true" android:background="@color/surface">
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="20dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/title" android:textSize="28sp" android:textStyle="bold"
+            android:textColor="@color/text" />
+        <TextView android:id="@+id/hint" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="@string/hint_empty" android:textSize="16sp" />
+        <uz.rub.scanner.CropImageView android:id="@+id/cropImage"
+            android:layout_width="match_parent" android:layout_height="420dp"
+            android:layout_marginTop="16dp" android:background="#E4E7EC" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/cameraButton"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="@string/camera" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/galleryButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:layout_marginStart="10dp" android:text="@string/gallery" />
+        </LinearLayout>
+        <com.google.android.material.button.MaterialButton android:id="@+id/recognizeButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:enabled="false" android:text="@string/recognize" />
+        <LinearLayout android:id="@+id/results" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:background="#EAF2FF" android:orientation="vertical"
+            android:padding="16dp" android:visibility="gone">
+            <TextView android:id="@+id/uzsResult" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="@color/text" android:textSize="19sp" android:textStyle="bold" />
+            <TextView android:id="@+id/rubOneResult" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:textColor="@color/text" android:textSize="18sp" />
+            <TextView android:id="@+id/rubTwoResult" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:textColor="@color/text" android:textSize="18sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
