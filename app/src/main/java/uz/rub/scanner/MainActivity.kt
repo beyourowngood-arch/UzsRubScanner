@@ -3,6 +3,7 @@ package uz.rub.scanner
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -17,8 +18,6 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
-import java.text.NumberFormat
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var cropImage: CropImageView
@@ -50,6 +49,9 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.galleryButton).setOnClickListener { pickPhoto.launch("image/*") }
         findViewById<View>(R.id.cameraButton).setOnClickListener { openCamera() }
+        findViewById<View>(R.id.settingsButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
         recognizeButton.setOnClickListener { recognizeSelection() }
     }
 
@@ -125,15 +127,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showResult(uzs: Double) {
-        val locale = Locale("ru", "RU")
-        val uzsFormat = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
-        val rubFormat = NumberFormat.getNumberInstance(locale).apply {
-            minimumFractionDigits = 2
-            maximumFractionDigits = 2
-        }
-        uzsResult.text = getString(R.string.result_uzs, uzsFormat.format(uzs))
-        rubOneResult.text = getString(R.string.result_rate_one, rubFormat.format(uzs / 110.0))
-        rubTwoResult.text = getString(R.string.result_rate_two, rubFormat.format(uzs / 11750.0 * 86.0))
+        val repository = RatesRepository(
+            SharedPreferencesRatesStorage(
+                getSharedPreferences(SettingsActivity.PREFERENCES_NAME, MODE_PRIVATE),
+            ),
+        )
+        val converted = PriceCalculator.calculate(uzs, repository.load())
+        uzsResult.text = PriceDisplayFormatter.amount(uzs)
+        rubOneResult.text = PriceDisplayFormatter.price1(converted.price1)
+        rubTwoResult.text = PriceDisplayFormatter.price2(converted.price2)
         results.visibility = View.VISIBLE
     }
 }

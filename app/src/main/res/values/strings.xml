@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">UZS → RUB</string>
+    <string name="app_name">Сканер цены</string>
     <string name="title">Сканер цены</string>
     <string name="hint_empty">Сделайте или выберите фото чека/ценника</string>
     <string name="hint_crop">Проведите пальцем по области с ценой</string>
@@ -11,7 +11,11 @@
     <string name="no_digits">Не удалось распознать сумму. Выделите область точнее.</string>
     <string name="image_error">Не удалось открыть изображение</string>
     <string name="camera_error">Не удалось создать файл для фото</string>
-    <string name="result_uzs">Исходная сумма: %1$s UZS</string>
-    <string name="result_rate_one">UZS / 110: %1$s RUB</string>
-    <string name="result_rate_two">UZS / 11750 × 86: %1$s RUB</string>
+    <string name="settings">Настройки</string>
+    <string name="rate_1">Курс 1</string>
+    <string name="rate_2">Курс 2</string>
+    <string name="rate_3">Курс 3</string>
+    <string name="save">Сохранить</string>
+    <string name="saved">Курсы сохранены</string>
+    <string name="invalid_rates">Введите положительные числовые значения</string>
 </resources>
