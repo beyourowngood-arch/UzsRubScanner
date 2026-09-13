@@ -4,22 +4,23 @@ import java.text.NumberFormat
 import java.util.Locale
 
 data class ExchangeRates(
-    val rateOne: Double = DEFAULT_RATE_ONE,
-    val rateTwo: Double = DEFAULT_RATE_TWO,
-    val rateThree: Double = DEFAULT_RATE_THREE,
+    val marketUzsPerRub: Double = DEFAULT_MARKET_UZS_PER_RUB,
+    val officialUzsPerUsd: Double = DEFAULT_UZS_PER_USD,
+    val rubPerUsd: Double = DEFAULT_RUB_PER_USD,
 ) {
-    fun isValid(): Boolean = listOf(rateOne, rateTwo, rateThree).all { it.isFinite() && it > 0 }
+    fun isValid(): Boolean = listOf(marketUzsPerRub, officialUzsPerUsd, rubPerUsd)
+        .all { it.isFinite() && it > 0 }
 
     companion object {
-        const val DEFAULT_RATE_ONE = 110.0
-        const val DEFAULT_RATE_TWO = 11_750.0
-        const val DEFAULT_RATE_THREE = 86.0
+        const val DEFAULT_MARKET_UZS_PER_RUB = 110.0
+        const val DEFAULT_UZS_PER_USD = 11_750.0
+        const val DEFAULT_RUB_PER_USD = 86.0
     }
 }
 
 data class PriceResult(
-    val throughRubles: Double,
-    val throughDollars: Double,
+    val directRub: Double,
+    val crossRateRub: Double,
 )
 
 object PriceCalculator {
@@ -59,8 +60,8 @@ object PriceCalculator {
     fun convert(amount: Double, rates: ExchangeRates): PriceResult {
         require(rates.isValid())
         return PriceResult(
-            throughRubles = amount / rates.rateOne,
-            throughDollars = amount / rates.rateTwo * rates.rateThree,
+            directRub = amount / rates.marketUzsPerRub,
+            crossRateRub = amount / rates.officialUzsPerUsd * rates.rubPerUsd,
         )
     }
 }

@@ -20,6 +20,14 @@ class PriceCalculatorTest {
     }
 
     @Test
+    fun `parsePrice keeps decimal part and removes grouping separators`() {
+        assertEquals(1_234.56, requireNotNull(PriceCalculator.parsePrice("1 234,56")), 0.001)
+        assertEquals(1_234.56, requireNotNull(PriceCalculator.parsePrice("1.234,56")), 0.001)
+        assertEquals(1_234.56, requireNotNull(PriceCalculator.parsePrice("1,234.56")), 0.001)
+        assertEquals(1_234.0, requireNotNull(PriceCalculator.parsePrice("1.234")), 0.001)
+    }
+
+    @Test
     fun `convert uses configurable direct and cross rates`() {
         val result = PriceCalculator.convert(
             uzs = 23_500.0,
