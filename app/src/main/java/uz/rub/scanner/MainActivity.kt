@@ -87,6 +87,13 @@ class MainActivity : AppCompatActivity() {
             .onFailure { Toast.makeText(this, R.string.image_error, Toast.LENGTH_SHORT).show() }
     }
 
+    private fun prepareForNewImage() {
+        imageGeneration++
+        lastAmount = null
+        results.visibility = View.GONE
+        hint.setText(R.string.hint_empty)
+    }
+
     private fun decodeBitmap(uri: Uri): Bitmap {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val source = ImageDecoder.createSource(contentResolver, uri)
@@ -116,6 +123,7 @@ class MainActivity : AppCompatActivity() {
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         recognizer.process(InputImage.fromBitmap(selected, 0))
             .addOnSuccessListener { text ->
+                if (requestedGeneration != imageGeneration) return@addOnSuccessListener
                 val amount = PriceCalculator.extractAmount(text.text)
                 if (amount == null) {
                     Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
@@ -137,25 +145,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun showResult(uzs: Double) {
         lastAmount = uzs
-        val locale = Locale("ru", "RU")
-        val uzsFormat = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
-        val rubFormat = NumberFormat.getNumberInstance(locale).apply {
-            minimumFractionDigits = 2
-            maximumFractionDigits = 2
-        }
         val converted = PriceCalculator.convert(uzs, rates)
-        uzsResult.text = getString(R.string.result_uzs, uzsFormat.format(uzs))
-        rubOneResult.text = getString(
-            R.string.result_rate_one,
-            uzsFormat.format(rates.marketUzsPerRub),
-            rubFormat.format(converted.directRub),
-        )
-        rubTwoResult.text = getString(
-            R.string.result_rate_two,
-            uzsFormat.format(rates.officialUzsPerUsd),
-            rubFormat.format(rates.rubPerUsd),
-            rubFormat.format(converted.crossRateRub),
-        )
+        uzsResult.text = getString(R.string.result_uzs, PriceFormatter.amount(uzs))
+        rubOneResult.text = getString(R.string.result_rate_one, PriceFormatter.rubles(converted.directRub))
+        rubTwoResult.text = getString(R.string.result_rate_two, PriceFormatter.rubles(converted.crossRateRub))
         results.visibility = View.VISIBLE
     }
 

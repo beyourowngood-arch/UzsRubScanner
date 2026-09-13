@@ -21,7 +21,9 @@
     <string name="no_digits">Не удалось распознать сумму. Выделите область точнее.</string>
     <string name="image_error">Не удалось открыть изображение</string>
     <string name="camera_error">Не удалось создать файл для фото</string>
-    <string name="result_uzs">Исходная сумма: %1$s UZS</string>
-    <string name="result_rate_one">По прямому курсу (%1$s): %2$s RUB</string>
-    <string name="result_rate_two">Через USD (%1$s × %2$s): %3$s RUB</string>
+    <string name="result_uzs">Исходная сумма: %1$s сум</string>
+    <string name="result_rate_one">%1$s</string>
+    <string name="result_rate_two">%1$s</string>
+    <string name="through_rubles">Цена через рубли</string>
+    <string name="through_dollars">Цена через доллары</string>
 </resources>

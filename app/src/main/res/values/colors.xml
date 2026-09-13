@@ -5,5 +5,7 @@
     <color name="surface">#FFFBFE</color>
     <color name="surface_variant">#F1ECF4</color>
     <color name="preview">#E9E3ED</color>
+    <color name="card">#F1ECF4</color>
     <color name="text">#1D1B20</color>
+    <color name="text_secondary">#625F66</color>
 </resources>

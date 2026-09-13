@@ -15,7 +15,7 @@
 ## Сборка
 
 ```bash
-gradle assembleDebug
+gradle testDebugUnitTest assembleDebug
 ```
 
 APK появится в `app/build/outputs/apk/debug/app-debug.apk`. Workflow GitHub Actions выполняет

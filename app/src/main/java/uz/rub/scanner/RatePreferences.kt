@@ -1,23 +1,30 @@
 package uz.rub.scanner
 
 import android.content.Context
+import android.content.SharedPreferences
 
-class RatePreferences(context: Context) {
-    private val preferences = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
+class RatePreferences(private val preferences: SharedPreferences) {
+    constructor(context: Context) : this(context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE))
 
     fun load(): ExchangeRates = ExchangeRates(
-        marketUzsPerRub = preferences.getFloat(KEY_MARKET, 110f).toDouble(),
-        officialUzsPerUsd = preferences.getFloat(KEY_UZS_USD, 11_750f).toDouble(),
-        rubPerUsd = preferences.getFloat(KEY_RUB_USD, 86f).toDouble(),
+        marketUzsPerRub = preferences.readRate(KEY_MARKET, ExchangeRates.DEFAULT_MARKET_UZS_PER_RUB),
+        officialUzsPerUsd = preferences.readRate(KEY_UZS_USD, ExchangeRates.DEFAULT_UZS_PER_USD),
+        rubPerUsd = preferences.readRate(KEY_RUB_USD, ExchangeRates.DEFAULT_RUB_PER_USD),
     )
 
     fun save(rates: ExchangeRates) {
         preferences.edit()
-            .putFloat(KEY_MARKET, rates.marketUzsPerRub.toFloat())
-            .putFloat(KEY_UZS_USD, rates.officialUzsPerUsd.toFloat())
-            .putFloat(KEY_RUB_USD, rates.rubPerUsd.toFloat())
+            .putString(KEY_MARKET, rates.marketUzsPerRub.toString())
+            .putString(KEY_UZS_USD, rates.officialUzsPerUsd.toString())
+            .putString(KEY_RUB_USD, rates.rubPerUsd.toString())
             .apply()
     }
+
+    private fun SharedPreferences.readRate(key: String, default: Double): Double = when (val value = all[key]) {
+        is String -> value.toDoubleOrNull()
+        is Number -> value.toDouble()
+        else -> null
+    }?.takeIf { it.isFinite() && it > 0 } ?: default
 
     private companion object {
         const val FILE_NAME = "exchange_rates"
