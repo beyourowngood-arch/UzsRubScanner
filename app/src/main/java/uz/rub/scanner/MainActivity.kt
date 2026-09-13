@@ -1,5 +1,6 @@
 package uz.rub.scanner
 
+import android.content.DialogInterface
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
@@ -13,6 +14,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -28,6 +31,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var uzsResult: TextView
     private lateinit var rubOneResult: TextView
     private lateinit var rubTwoResult: TextView
+    private lateinit var ratePreferences: RatePreferences
+    private var rates = ExchangeRates()
+    private var lastAmount: Double? = null
     private var pendingCameraUri: Uri? = null
 
     private val pickPhoto = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -47,9 +53,12 @@ class MainActivity : AppCompatActivity() {
         uzsResult = findViewById(R.id.uzsResult)
         rubOneResult = findViewById(R.id.rubOneResult)
         rubTwoResult = findViewById(R.id.rubTwoResult)
+        ratePreferences = RatePreferences(this)
+        rates = ratePreferences.load()
 
         findViewById<View>(R.id.galleryButton).setOnClickListener { pickPhoto.launch("image/*") }
         findViewById<View>(R.id.cameraButton).setOnClickListener { openCamera() }
+        findViewById<View>(R.id.settingsButton).setOnClickListener { showRateSettings() }
         recognizeButton.setOnClickListener { recognizeSelection() }
     }
 
@@ -106,7 +115,7 @@ class MainActivity : AppCompatActivity() {
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         recognizer.process(InputImage.fromBitmap(selected, 0))
             .addOnSuccessListener { text ->
-                val amount = extractAmount(text.text)
+                val amount = PriceCalculator.extractAmount(text.text)
                 if (amount == null) {
                     Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
                 } else {
@@ -124,25 +133,76 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun extractAmount(text: String): Double? {
-        return Regex("[0-9][0-9\\s.,'’]*")
-            .findAll(text)
-            .map { it.value.filter(Char::isDigit) }
-            .filter { it.isNotEmpty() }
-            .maxByOrNull { it.length }
-            ?.toDoubleOrNull()
-    }
-
     private fun showResult(uzs: Double) {
+        lastAmount = uzs
         val locale = Locale("ru", "RU")
         val uzsFormat = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
         val rubFormat = NumberFormat.getNumberInstance(locale).apply {
             minimumFractionDigits = 2
             maximumFractionDigits = 2
         }
+        val converted = PriceCalculator.convert(uzs, rates)
         uzsResult.text = getString(R.string.result_uzs, uzsFormat.format(uzs))
-        rubOneResult.text = getString(R.string.result_rate_one, rubFormat.format(uzs / 110.0))
-        rubTwoResult.text = getString(R.string.result_rate_two, rubFormat.format(uzs / 11750.0 * 86.0))
+        rubOneResult.text = getString(
+            R.string.result_rate_one,
+            uzsFormat.format(rates.marketUzsPerRub),
+            rubFormat.format(converted.directRub),
+        )
+        rubTwoResult.text = getString(
+            R.string.result_rate_two,
+            uzsFormat.format(rates.officialUzsPerUsd),
+            rubFormat.format(rates.rubPerUsd),
+            rubFormat.format(converted.crossRateRub),
+        )
         results.visibility = View.VISIBLE
+    }
+
+    private fun showRateSettings() {
+        val content = layoutInflater.inflate(R.layout.dialog_rates, null)
+        val marketInput = content.findViewById<TextInputEditText>(R.id.marketRateInput)
+        val uzsUsdInput = content.findViewById<TextInputEditText>(R.id.uzsUsdRateInput)
+        val rubUsdInput = content.findViewById<TextInputEditText>(R.id.rubUsdRateInput)
+        marketInput.setText(rates.marketUzsPerRub.toEditableRate())
+        uzsUsdInput.setText(rates.officialUzsPerUsd.toEditableRate())
+        rubUsdInput.setText(rates.rubPerUsd.toEditableRate())
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.settings_title)
+            .setMessage(R.string.settings_description)
+            .setView(content)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.save, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val updated = ExchangeRates(
+                    marketUzsPerRub = marketInput.decimalValue(),
+                    officialUzsPerUsd = uzsUsdInput.decimalValue(),
+                    rubPerUsd = rubUsdInput.decimalValue(),
+                )
+                if (!updated.isValid()) {
+                    Toast.makeText(this, R.string.invalid_rates, Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                rates = updated
+                ratePreferences.save(updated)
+                lastAmount?.let(::showResult)
+                Toast.makeText(this, R.string.rates_saved, Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun TextInputEditText.decimalValue(): Double = text?.toString()
+        ?.trim()
+        ?.replace(',', '.')
+        ?.toDoubleOrNull()
+        ?: Double.NaN
+
+    private fun Double.toEditableRate(): String = if (this % 1.0 == 0.0) {
+        toLong().toString()
+    } else {
+        toString()
     }
 }
