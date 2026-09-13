@@ -16,6 +16,7 @@ class CropImageView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : View(context, attrs) {
+    var onSelectionFinished: (() -> Unit)? = null
     private var bitmap: Bitmap? = null
     private val imageRect = RectF()
     private val selection = RectF()
@@ -86,16 +87,19 @@ class CropImageView @JvmOverloads constructor(
         val y = event.y.coerceIn(imageRect.top, imageRect.bottom)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                parent.requestDisallowInterceptTouchEvent(true)
+                parent?.requestDisallowInterceptTouchEvent(true)
                 startX = x
                 startY = y
                 selection.set(x, y, x, y)
             }
             MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> {
                 selection.set(min(startX, x), min(startY, y), max(startX, x), max(startY, y))
-                if (event.actionMasked == MotionEvent.ACTION_UP) parent.requestDisallowInterceptTouchEvent(false)
+                if (event.actionMasked == MotionEvent.ACTION_UP) {
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                    if (hasSelection()) onSelectionFinished?.invoke()
+                }
             }
-            MotionEvent.ACTION_CANCEL -> parent.requestDisallowInterceptTouchEvent(false)
+            MotionEvent.ACTION_CANCEL -> parent?.requestDisallowInterceptTouchEvent(false)
         }
         invalidate()
         return true

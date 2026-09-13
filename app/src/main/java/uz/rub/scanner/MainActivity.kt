@@ -1,5 +1,6 @@
 package uz.rub.scanner
 
+import android.content.DialogInterface
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
@@ -12,23 +13,25 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
-import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
-import java.text.NumberFormat
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var cropImage: CropImageView
     private lateinit var hint: TextView
-    private lateinit var recognizeButton: MaterialButton
     private lateinit var results: View
     private lateinit var uzsResult: TextView
     private lateinit var rubOneResult: TextView
     private lateinit var rubTwoResult: TextView
+    private lateinit var ratePreferences: RatePreferences
+    private var rates = ExchangeRates()
+    private var lastAmount: Double? = null
     private var pendingCameraUri: Uri? = null
+    private var imageGeneration = 0
 
     private val pickPhoto = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let(::showImage)
@@ -42,15 +45,23 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         cropImage = findViewById(R.id.cropImage)
         hint = findViewById(R.id.hint)
-        recognizeButton = findViewById(R.id.recognizeButton)
         results = findViewById(R.id.results)
         uzsResult = findViewById(R.id.uzsResult)
         rubOneResult = findViewById(R.id.rubOneResult)
         rubTwoResult = findViewById(R.id.rubTwoResult)
+        ratePreferences = RatePreferences(this)
+        rates = ratePreferences.load()
 
-        findViewById<View>(R.id.galleryButton).setOnClickListener { pickPhoto.launch("image/*") }
-        findViewById<View>(R.id.cameraButton).setOnClickListener { openCamera() }
-        recognizeButton.setOnClickListener { recognizeSelection() }
+        cropImage.onSelectionFinished = ::recognizeSelection
+        findViewById<View>(R.id.galleryButton).setOnClickListener {
+            prepareForNewImage()
+            pickPhoto.launch("image/*")
+        }
+        findViewById<View>(R.id.cameraButton).setOnClickListener {
+            prepareForNewImage()
+            openCamera()
+        }
+        findViewById<View>(R.id.settingsButton).setOnClickListener { showRateSettings() }
     }
 
     private fun openCamera() {
@@ -71,7 +82,6 @@ class MainActivity : AppCompatActivity() {
             .onSuccess { bitmap ->
                 cropImage.setImage(bitmap)
                 hint.setText(R.string.hint_crop)
-                recognizeButton.isEnabled = true
                 results.visibility = View.GONE
             }
             .onFailure { Toast.makeText(this, R.string.image_error, Toast.LENGTH_SHORT).show() }
@@ -101,12 +111,13 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.select_area, Toast.LENGTH_SHORT).show()
             return
         }
-        recognizeButton.isEnabled = false
-        recognizeButton.setText(R.string.recognizing)
+        val requestedGeneration = imageGeneration
+        hint.setText(R.string.recognizing)
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         recognizer.process(InputImage.fromBitmap(selected, 0))
             .addOnSuccessListener { text ->
-                val amount = extractAmount(text.text)
+                if (requestedGeneration != imageGeneration) return@addOnSuccessListener
+                val amount = PriceCalculator.extractAmount(text.text)
                 if (amount == null) {
                     Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
                 } else {
@@ -114,35 +125,79 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .addOnFailureListener {
-                Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
+                if (requestedGeneration == imageGeneration) {
+                    Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
+                }
             }
             .addOnCompleteListener {
                 selected.recycle()
                 recognizer.close()
-                recognizeButton.isEnabled = true
-                recognizeButton.setText(R.string.recognize)
+                if (requestedGeneration == imageGeneration) hint.setText(R.string.hint_crop)
             }
     }
 
-    private fun extractAmount(text: String): Double? {
-        return Regex("[0-9][0-9\\s.,'’]*")
-            .findAll(text)
-            .map { it.value.filter(Char::isDigit) }
-            .filter { it.isNotEmpty() }
-            .maxByOrNull { it.length }
-            ?.toDoubleOrNull()
+    private fun showResult(uzs: Double) {
+        lastAmount = uzs
+        val converted = PriceCalculator.convert(uzs, rates)
+        uzsResult.text = getString(R.string.result_sum, PriceFormatter.amount(uzs))
+        rubOneResult.text = PriceFormatter.rubles(converted.throughRubles)
+        rubTwoResult.text = PriceFormatter.rubles(converted.throughDollars)
+        results.visibility = View.VISIBLE
     }
 
-    private fun showResult(uzs: Double) {
-        val locale = Locale("ru", "RU")
-        val uzsFormat = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
-        val rubFormat = NumberFormat.getNumberInstance(locale).apply {
-            minimumFractionDigits = 2
-            maximumFractionDigits = 2
+    private fun showRateSettings() {
+        val content = layoutInflater.inflate(R.layout.dialog_rates, null)
+        val marketInput = content.findViewById<TextInputEditText>(R.id.marketRateInput)
+        val uzsUsdInput = content.findViewById<TextInputEditText>(R.id.uzsUsdRateInput)
+        val rubUsdInput = content.findViewById<TextInputEditText>(R.id.rubUsdRateInput)
+        marketInput.setText(rates.rateOne.toEditableRate())
+        uzsUsdInput.setText(rates.rateTwo.toEditableRate())
+        rubUsdInput.setText(rates.rateThree.toEditableRate())
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.settings_title)
+            .setMessage(R.string.settings_description)
+            .setView(content)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.save, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val updated = ExchangeRates(
+                    rateOne = marketInput.decimalValue(),
+                    rateTwo = uzsUsdInput.decimalValue(),
+                    rateThree = rubUsdInput.decimalValue(),
+                )
+                if (!updated.isValid()) {
+                    Toast.makeText(this, R.string.invalid_rates, Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                rates = updated
+                ratePreferences.save(updated)
+                lastAmount?.let(::showResult)
+                Toast.makeText(this, R.string.rates_saved, Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
         }
-        uzsResult.text = getString(R.string.result_uzs, uzsFormat.format(uzs))
-        rubOneResult.text = getString(R.string.result_rate_one, rubFormat.format(uzs / 110.0))
-        rubTwoResult.text = getString(R.string.result_rate_two, rubFormat.format(uzs / 11750.0 * 86.0))
-        results.visibility = View.VISIBLE
+        dialog.show()
+    }
+
+    private fun prepareForNewImage() {
+        imageGeneration += 1
+        lastAmount = null
+        results.visibility = View.GONE
+        hint.setText(R.string.hint_empty)
+    }
+
+    private fun TextInputEditText.decimalValue(): Double = text?.toString()
+        ?.trim()
+        ?.replace(',', '.')
+        ?.toDoubleOrNull()
+        ?: Double.NaN
+
+    private fun Double.toEditableRate(): String = if (this % 1.0 == 0.0) {
+        toLong().toString()
+    } else {
+        toString()
     }
 }

@@ -1,7 +1,10 @@
 <resources>
-    <color name="primary">#175CD3</color>
-    <color name="primary_dark">#0B3B91</color>
-    <color name="accent">#12B76A</color>
-    <color name="surface">#F8FAFC</color>
-    <color name="text">#101828</color>
+    <color name="primary">#222222</color>
+    <color name="primary_dark">#111111</color>
+    <color name="accent">#626262</color>
+    <color name="surface">#FAFAF8</color>
+    <color name="card">#F0F0EC</color>
+    <color name="preview">#E7E7E2</color>
+    <color name="text">#1B1B1A</color>
+    <color name="text_secondary">#686864</color>
 </resources>
