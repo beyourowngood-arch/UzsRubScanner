@@ -116,7 +116,6 @@ class MainActivity : AppCompatActivity() {
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         recognizer.process(InputImage.fromBitmap(selected, 0))
             .addOnSuccessListener { text ->
-                if (requestedGeneration != imageGeneration) return@addOnSuccessListener
                 val amount = PriceCalculator.extractAmount(text.text)
                 if (amount == null) {
                     Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
@@ -138,10 +137,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun showResult(uzs: Double) {
         lastAmount = uzs
+        val locale = Locale("ru", "RU")
+        val uzsFormat = NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 0 }
+        val rubFormat = NumberFormat.getNumberInstance(locale).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
         val converted = PriceCalculator.convert(uzs, rates)
-        uzsResult.text = getString(R.string.result_sum, PriceFormatter.amount(uzs))
-        rubOneResult.text = PriceFormatter.rubles(converted.throughRubles)
-        rubTwoResult.text = PriceFormatter.rubles(converted.throughDollars)
+        uzsResult.text = getString(R.string.result_uzs, uzsFormat.format(uzs))
+        rubOneResult.text = getString(
+            R.string.result_rate_one,
+            uzsFormat.format(rates.marketUzsPerRub),
+            rubFormat.format(converted.directRub),
+        )
+        rubTwoResult.text = getString(
+            R.string.result_rate_two,
+            uzsFormat.format(rates.officialUzsPerUsd),
+            rubFormat.format(rates.rubPerUsd),
+            rubFormat.format(converted.crossRateRub),
+        )
         results.visibility = View.VISIBLE
     }
 
@@ -150,9 +164,9 @@ class MainActivity : AppCompatActivity() {
         val marketInput = content.findViewById<TextInputEditText>(R.id.marketRateInput)
         val uzsUsdInput = content.findViewById<TextInputEditText>(R.id.uzsUsdRateInput)
         val rubUsdInput = content.findViewById<TextInputEditText>(R.id.rubUsdRateInput)
-        marketInput.setText(rates.rateOne.toEditableRate())
-        uzsUsdInput.setText(rates.rateTwo.toEditableRate())
-        rubUsdInput.setText(rates.rateThree.toEditableRate())
+        marketInput.setText(rates.marketUzsPerRub.toEditableRate())
+        uzsUsdInput.setText(rates.officialUzsPerUsd.toEditableRate())
+        rubUsdInput.setText(rates.rubPerUsd.toEditableRate())
 
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.settings_title)
@@ -164,9 +178,9 @@ class MainActivity : AppCompatActivity() {
         dialog.setOnShowListener {
             dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
                 val updated = ExchangeRates(
-                    rateOne = marketInput.decimalValue(),
-                    rateTwo = uzsUsdInput.decimalValue(),
-                    rateThree = rubUsdInput.decimalValue(),
+                    marketUzsPerRub = marketInput.decimalValue(),
+                    officialUzsPerUsd = uzsUsdInput.decimalValue(),
+                    rubPerUsd = rubUsdInput.decimalValue(),
                 )
                 if (!updated.isValid()) {
                     Toast.makeText(this, R.string.invalid_rates, Toast.LENGTH_SHORT).show()
@@ -180,13 +194,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         dialog.show()
-    }
-
-    private fun prepareForNewImage() {
-        imageGeneration += 1
-        lastAmount = null
-        results.visibility = View.GONE
-        hint.setText(R.string.hint_empty)
     }
 
     private fun TextInputEditText.decimalValue(): Double = text?.toString()
