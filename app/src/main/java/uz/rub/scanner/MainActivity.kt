@@ -13,20 +13,16 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
-import java.text.NumberFormat
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var cropImage: CropImageView
     private lateinit var hint: TextView
-    private lateinit var recognizeButton: MaterialButton
     private lateinit var results: View
     private lateinit var uzsResult: TextView
     private lateinit var rubOneResult: TextView
@@ -35,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private var rates = ExchangeRates()
     private var lastAmount: Double? = null
     private var pendingCameraUri: Uri? = null
+    private var imageGeneration = 0
 
     private val pickPhoto = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let(::showImage)
@@ -48,7 +45,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         cropImage = findViewById(R.id.cropImage)
         hint = findViewById(R.id.hint)
-        recognizeButton = findViewById(R.id.recognizeButton)
         results = findViewById(R.id.results)
         uzsResult = findViewById(R.id.uzsResult)
         rubOneResult = findViewById(R.id.rubOneResult)
@@ -56,10 +52,16 @@ class MainActivity : AppCompatActivity() {
         ratePreferences = RatePreferences(this)
         rates = ratePreferences.load()
 
-        findViewById<View>(R.id.galleryButton).setOnClickListener { pickPhoto.launch("image/*") }
-        findViewById<View>(R.id.cameraButton).setOnClickListener { openCamera() }
+        cropImage.onSelectionFinished = ::recognizeSelection
+        findViewById<View>(R.id.galleryButton).setOnClickListener {
+            prepareForNewImage()
+            pickPhoto.launch("image/*")
+        }
+        findViewById<View>(R.id.cameraButton).setOnClickListener {
+            prepareForNewImage()
+            openCamera()
+        }
         findViewById<View>(R.id.settingsButton).setOnClickListener { showRateSettings() }
-        recognizeButton.setOnClickListener { recognizeSelection() }
     }
 
     private fun openCamera() {
@@ -80,7 +82,6 @@ class MainActivity : AppCompatActivity() {
             .onSuccess { bitmap ->
                 cropImage.setImage(bitmap)
                 hint.setText(R.string.hint_crop)
-                recognizeButton.isEnabled = true
                 results.visibility = View.GONE
             }
             .onFailure { Toast.makeText(this, R.string.image_error, Toast.LENGTH_SHORT).show() }
@@ -110,8 +111,8 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.select_area, Toast.LENGTH_SHORT).show()
             return
         }
-        recognizeButton.isEnabled = false
-        recognizeButton.setText(R.string.recognizing)
+        val requestedGeneration = imageGeneration
+        hint.setText(R.string.recognizing)
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         recognizer.process(InputImage.fromBitmap(selected, 0))
             .addOnSuccessListener { text ->
@@ -123,13 +124,14 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .addOnFailureListener {
-                Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
+                if (requestedGeneration == imageGeneration) {
+                    Toast.makeText(this, R.string.no_digits, Toast.LENGTH_LONG).show()
+                }
             }
             .addOnCompleteListener {
                 selected.recycle()
                 recognizer.close()
-                recognizeButton.isEnabled = true
-                recognizeButton.setText(R.string.recognize)
+                if (requestedGeneration == imageGeneration) hint.setText(R.string.hint_crop)
             }
     }
 

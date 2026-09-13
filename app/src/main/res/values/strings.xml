@@ -3,10 +3,9 @@
     <string name="title">Сканер цены</string>
     <string name="subtitle">UZS → RUB быстро и прямо на устройстве</string>
     <string name="hint_empty">Сделайте или выберите фото чека/ценника</string>
-    <string name="hint_crop">Проведите пальцем по области с ценой</string>
+    <string name="hint_crop">Выделите цену пальцем — распознавание начнётся автоматически</string>
     <string name="camera">Камера</string>
     <string name="gallery">Фото</string>
-    <string name="recognize">Распознать цену</string>
     <string name="recognizing">Распознаём…</string>
     <string name="settings">Курсы</string>
     <string name="settings_title">Настройки курсов</string>
