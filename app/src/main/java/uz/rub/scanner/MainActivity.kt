@@ -1,9 +1,9 @@
 package uz.rub.scanner
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,7 +13,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
-import com.google.android.material.button.MaterialButton
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -22,12 +21,13 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
     private lateinit var cropImage: CropImageView
     private lateinit var hint: TextView
-    private lateinit var recognizeButton: MaterialButton
     private lateinit var results: View
     private lateinit var uzsResult: TextView
     private lateinit var rubOneResult: TextView
     private lateinit var rubTwoResult: TextView
     private var pendingCameraUri: Uri? = null
+    private var isRecognizing = false
+    private val autoRecognitionAction = AutoRecognitionAction(::recognizeSelection)
 
     private val pickPhoto = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let(::showImage)
@@ -41,7 +41,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         cropImage = findViewById(R.id.cropImage)
         hint = findViewById(R.id.hint)
-        recognizeButton = findViewById(R.id.recognizeButton)
         results = findViewById(R.id.results)
         uzsResult = findViewById(R.id.uzsResult)
         rubOneResult = findViewById(R.id.rubOneResult)
@@ -52,7 +51,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-        recognizeButton.setOnClickListener { recognizeSelection() }
+        cropImage.onSelectionFinished = {
+            autoRecognitionAction.onSelectionFinished(cropImage.hasSelection())
+        }
     }
 
     private fun openCamera() {
@@ -73,7 +74,6 @@ class MainActivity : AppCompatActivity() {
             .onSuccess { bitmap ->
                 cropImage.setImage(bitmap)
                 hint.setText(R.string.hint_crop)
-                recognizeButton.isEnabled = true
                 results.visibility = View.GONE
             }
             .onFailure { Toast.makeText(this, R.string.image_error, Toast.LENGTH_SHORT).show() }
@@ -98,13 +98,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun recognizeSelection() {
+        if (isRecognizing) return
         val selected = cropImage.croppedBitmap()
         if (selected == null) {
             Toast.makeText(this, R.string.select_area, Toast.LENGTH_SHORT).show()
             return
         }
-        recognizeButton.isEnabled = false
-        recognizeButton.setText(R.string.recognizing)
+        isRecognizing = true
+        hint.setText(R.string.recognizing)
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         recognizer.process(InputImage.fromBitmap(selected, 0))
             .addOnSuccessListener { text ->
@@ -121,8 +122,8 @@ class MainActivity : AppCompatActivity() {
             .addOnCompleteListener {
                 selected.recycle()
                 recognizer.close()
-                recognizeButton.isEnabled = true
-                recognizeButton.setText(R.string.recognize)
+                isRecognizing = false
+                hint.setText(R.string.hint_crop)
             }
     }
 

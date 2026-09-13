@@ -39,14 +39,14 @@ class RatesTest {
     @Test
     fun `formats sum and rubles without trailing zero`() {
         assertEquals("Исходная сумма: 3\u00A0900 сум", PriceDisplayFormatter.amount(3900.0))
-        assertEquals("Цена 1: 35 руб.", PriceDisplayFormatter.price1(35.0))
-        assertEquals("Цена 2: 28,55 руб.", PriceDisplayFormatter.price2(28.55))
+        assertEquals("35 руб.", PriceDisplayFormatter.price1(35.0))
+        assertEquals("28,55 руб.", PriceDisplayFormatter.price2(28.55))
     }
 
     @Test
     fun `formats decimal values with reasonable precision`() {
         assertEquals("Исходная сумма: 3\u00A0900,5 сум", PriceDisplayFormatter.amount(3900.5))
-        assertEquals("Цена 1: 35,45 руб.", PriceDisplayFormatter.price1(35.4545))
+        assertEquals("35,45 руб.", PriceDisplayFormatter.price1(35.4545))
     }
 
     private class MemoryStorage : RatesStorage {

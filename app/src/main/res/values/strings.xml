@@ -5,7 +5,6 @@
     <string name="hint_crop">Проведите пальцем по области с ценой</string>
     <string name="camera">Камера</string>
     <string name="gallery">Фото</string>
-    <string name="recognize">Распознать цену</string>
     <string name="recognizing">Распознаём…</string>
     <string name="select_area">Сначала выделите область с ценой</string>
     <string name="no_digits">Не удалось распознать сумму. Выделите область точнее.</string>
@@ -18,4 +17,6 @@
     <string name="save">Сохранить</string>
     <string name="saved">Курсы сохранены</string>
     <string name="invalid_rates">Введите положительные числовые значения</string>
+    <string name="via_rubles">Цена через рубли</string>
+    <string name="via_dollars">Цена через доллары</string>
 </resources>

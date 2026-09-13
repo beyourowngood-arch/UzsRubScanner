@@ -72,6 +72,6 @@ object PriceDisplayFormatter {
     ).format(value)
 
     fun amount(amount: Double): String = "Исходная сумма: ${number(amount)} сум"
-    fun price1(value: Double): String = "Цена 1: ${number(value)} руб."
-    fun price2(value: Double): String = "Цена 2: ${number(value)} руб."
+    fun price1(value: Double): String = "${number(value)} руб."
+    fun price2(value: Double): String = "${number(value)} руб."
 }
